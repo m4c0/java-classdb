@@ -12,7 +12,8 @@ static int usage() {
   fprintf(stderr, "Usage:\n\n");
   fprintf(stderr, "    %s <command> <args...>\n\n", argv0);
   fprintf(stderr, "Where command can be:\n\n");
-  fprintf(stderr, "    add_jar - loads class from a jar into the DB\n\n");
+  fprintf(stderr, "    add_jar <jar> - loads class from a jar into the DB\n\n");
+  fprintf(stderr, "    find <query> - finds a class by name\n\n");
   fprintf(stderr, "    reset - creates a new DB, destroying existing one\n\n");
   return 1;
 }
@@ -42,19 +43,8 @@ static int sql_check(int rc, int exp, const char * msg) {
 #define _chk(x, exp) if (sql_check((x), exp, #x)) return 1;
 #define _(x) _chk(x, SQLITE_OK)
 
-int run_reset(int argc, char ** argv) {
-  if (argc != 0) return usage();
-
-  char * sql = slurp("main.sql");
-
-  char * err = NULL;
-  _(sqlite3_exec(db, sql, NULL, NULL, &err));
-
-  return 0;
-}
-
 int run_add_jar(int argc, char ** argv) {
-  if (argc == 0) return usage();
+  if (argc != 1) return usage();
 
   char buf[1024];
   snprintf(buf, 1024, "jar tf '%s'", *argv);
@@ -92,12 +82,45 @@ int run_add_jar(int argc, char ** argv) {
   return 0;
 }
 
+int run_find(int argc, char ** argv) {
+  if (argc != 1) return usage();
+
+  sqlite3_stmt * stmt;
+  _(sqlite3_prepare_v2(db,
+        "SELECT fqn FROM class WHERE fqn GLOB ?", -1,
+        &stmt, NULL));
+  _(sqlite3_bind_text(stmt, 1, *argv, -1, NULL));
+
+  int rc;
+  while (SQLITE_DONE != (rc = sqlite3_step(stmt))) {
+    printf("%s\n", sqlite3_column_text(stmt, 0));
+  }
+  if (sql_check(rc, SQLITE_DONE, "sqlite3_step(stmt)")) return 1;
+
+  sqlite3_finalize(stmt);
+
+  return 0;
+}
+
+int run_reset(int argc, char ** argv) {
+  if (argc != 0) return usage();
+
+  char * sql = slurp("main.sql");
+
+  char * err = NULL;
+  _(sqlite3_exec(db, sql, NULL, NULL, &err));
+
+  return 0;
+}
+
 int run(int argc, char ** argv) {
   if (argc == 0) return usage();
 
-  if      (0 == strcmp(*argv, "reset"  )) return run_reset  (--argc, ++argv);
-  else if (0 == strcmp(*argv, "add_jar")) return run_add_jar(--argc, ++argv);
-  else return usage();
+  if (0 == strcmp(*argv, "add_jar")) return run_add_jar(--argc, ++argv);
+  if (0 == strcmp(*argv, "find"   )) return run_find   (--argc, ++argv);
+  if (0 == strcmp(*argv, "reset"  )) return run_reset  (--argc, ++argv);
+
+  return usage();
 }
 
 int main(int argc, char ** argv) {
