@@ -110,7 +110,7 @@ int run_ctags(int argc, char ** argv) {
     const uint8_t * cls  = sqlite3_column_text(stmt, 1);
     const uint8_t * name = sqlite3_column_text(stmt, 2);
 
-    fprintf(f, "%s\tjar:file://%s!/%s.class\t/\\<%s\\>/\n", name, jar, cls, name);
+    fprintf(f, "%s\tjar:file://%s!/%s.class\t/\\<%s\\>\\.\\*{$/\n", name, jar, cls, name);
   }
 
   fclose(f);
@@ -181,7 +181,7 @@ int run_tagfunc(int argc, char ** argv) {
     const uint8_t * cls  = sqlite3_column_text(stmt, 1);
     const uint8_t * name = sqlite3_column_text(stmt, 2);
 
-    printf("%s\tjar:file://%s!/%s.class\t/\\<%s\\>/\n", name, jar, cls, name);
+    printf("%s\tjar:file://%s!/%s.class\t/\\<%s\\>\\.\\*{$/\n", name, jar, cls, name);
   }
 
   sqlite3_finalize(stmt);
