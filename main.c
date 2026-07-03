@@ -71,7 +71,8 @@ int run_add_jar(int argc, char ** argv) {
     if (strcmp(ext, ".class")) continue;
 
     *ext = 0;
-    char * name = strrchr(buf, '/');
+    char * name = strrchr(buf, '$');
+    if (!name) name = strrchr(buf, '/');
     name = name ? name + 1 : buf;
     if (0 == strcmp(name, "/package-info")) continue;
 
