@@ -54,7 +54,7 @@ int run_add_jar(int argc, char ** argv) {
 
   sqlite3_stmt * stmt;
   _(sqlite3_prepare_v2(db,
-        "INSERT INTO class (jar, fqn) VALUES (?, ?)", -1,
+        "INSERT INTO class (jar, fqn, name) VALUES (?, ?, ?)", -1,
         &stmt, NULL));
 
   int count = 0;
@@ -75,6 +75,7 @@ int run_add_jar(int argc, char ** argv) {
     _(sqlite3_reset(stmt));
     _(sqlite3_bind_text(stmt, 1, *argv, -1, NULL));
     _(sqlite3_bind_text(stmt, 2, buf,   -1, NULL));
+    _(sqlite3_bind_text(stmt, 3, name,  -1, NULL));
     _chk(sqlite3_step(stmt), SQLITE_DONE);
 
     count++;
@@ -85,6 +86,31 @@ int run_add_jar(int argc, char ** argv) {
   sqlite3_finalize(stmt);
 
   fprintf(stderr, "loaded %d classes from %s\n", count, *argv);
+
+  return 0;
+}
+
+int run_ctags(int argc, char ** argv) {
+  if (argc != 0) return usage();
+
+  sqlite3_stmt * stmt;
+  _(sqlite3_prepare_v2(db,
+        "SELECT jar, fqn, name FROM class ORDER BY name, jar, fqn", -1,
+        &stmt, NULL));
+
+  FILE * f = fopen("tags", "w");
+  assert(f);
+
+  int rc;
+  while (SQLITE_DONE != (rc = sqlite3_step(stmt))) {
+    const uint8_t * jar  = sqlite3_column_text(stmt, 0);
+    const uint8_t * cls  = sqlite3_column_text(stmt, 1);
+    const uint8_t * name = sqlite3_column_text(stmt, 2);
+
+    fprintf(f, "%s\tjar:file://%s!/%s.class\t/\\<%s\\>/\n", name, jar, cls, name);
+  }
+
+  fclose(f);
 
   return 0;
 }
@@ -141,6 +167,7 @@ int run(int argc, char ** argv) {
   if (argc == 0) return usage();
 
   if (0 == strcmp(*argv, "add-jar")) return run_add_jar(--argc, ++argv);
+  if (0 == strcmp(*argv, "ctags"  )) return run_ctags  (--argc, ++argv);
   if (0 == strcmp(*argv, "find"   )) return run_find   (--argc, ++argv);
   if (0 == strcmp(*argv, "javap"  )) return run_javap  (--argc, ++argv);
   if (0 == strcmp(*argv, "reset"  )) return run_reset  (--argc, ++argv);

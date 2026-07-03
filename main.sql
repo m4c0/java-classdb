@@ -4,6 +4,9 @@ CREATE TABLE class (
   id    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   jar   TEXT NOT NULL,
   fqn   TEXT NOT NULL,
+  name  TEXT NOT NULL,
   UNIQUE (jar, fqn)
 ) STRICT;
+
+CREATE INDEX class_name ON class (name);
 
