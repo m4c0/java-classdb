@@ -116,7 +116,7 @@ int run_reset(int argc, char ** argv) {
 int run(int argc, char ** argv) {
   if (argc == 0) return usage();
 
-  if (0 == strcmp(*argv, "add_jar")) return run_add_jar(--argc, ++argv);
+  if (0 == strcmp(*argv, "add-jar")) return run_add_jar(--argc, ++argv);
   if (0 == strcmp(*argv, "find"   )) return run_find   (--argc, ++argv);
   if (0 == strcmp(*argv, "reset"  )) return run_reset  (--argc, ++argv);
 
