@@ -14,6 +14,7 @@ static int usage() {
   fprintf(stderr, "Where command can be:\n\n");
   fprintf(stderr, "    add_jar <jar> - loads class from a jar into the DB\n\n");
   fprintf(stderr, "    find <query> - finds a class by name\n\n");
+  fprintf(stderr, "    javap <class> - given a class name, find a URL suitable for javap\n\n");
   fprintf(stderr, "    reset - creates a new DB, destroying existing one\n\n");
   return 1;
 }
@@ -108,6 +109,23 @@ int run_find(int argc, char ** argv) {
   return 0;
 }
 
+int run_javap(int argc, char ** argv) {
+  if (argc == 0) return usage();
+
+  sqlite3_stmt * stmt;
+  _(sqlite3_prepare_v2(db,
+        "SELECT jar FROM class WHERE fqn = ?", -1,
+        &stmt, NULL));
+  _(sqlite3_bind_text(stmt, 1, *argv, -1, NULL));
+
+  _chk(sqlite3_step(stmt), SQLITE_ROW);
+  printf("jar:file://%s!/%s.class\n", sqlite3_column_text(stmt, 0), *argv);
+
+  _chk(sqlite3_step(stmt), SQLITE_DONE);
+
+  return 0;
+}
+
 int run_reset(int argc, char ** argv) {
   if (argc != 0) return usage();
 
@@ -124,6 +142,7 @@ int run(int argc, char ** argv) {
 
   if (0 == strcmp(*argv, "add-jar")) return run_add_jar(--argc, ++argv);
   if (0 == strcmp(*argv, "find"   )) return run_find   (--argc, ++argv);
+  if (0 == strcmp(*argv, "javap"  )) return run_javap  (--argc, ++argv);
   if (0 == strcmp(*argv, "reset"  )) return run_reset  (--argc, ++argv);
 
   return usage();
