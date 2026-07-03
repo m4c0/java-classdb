@@ -16,6 +16,9 @@ static int usage() {
   fprintf(stderr, "    find <query> - finds a class by name\n\n");
   fprintf(stderr, "    javap <class> - given a class name, find a URL suitable for javap\n\n");
   fprintf(stderr, "    reset - creates a new DB, destroying existing one\n\n");
+  fprintf(stderr, "If you are a VIM user, these might be useful:\n\n");
+  fprintf(stderr, "    ctags - creates a ctags file with the entire DB\n\n");
+  fprintf(stderr, "    tagfunc <tag> - outputs ctags for a given tag\n\n");
   return 1;
 }
 
@@ -136,7 +139,7 @@ int run_find(int argc, char ** argv) {
 }
 
 int run_javap(int argc, char ** argv) {
-  if (argc == 0) return usage();
+  if (argc != 1) return usage();
 
   sqlite3_stmt * stmt;
   _(sqlite3_prepare_v2(db,
@@ -163,6 +166,29 @@ int run_reset(int argc, char ** argv) {
   return 0;
 }
 
+int run_tagfunc(int argc, char ** argv) {
+  if (argc != 1) return usage();
+
+  sqlite3_stmt * stmt;
+  _(sqlite3_prepare_v2(db,
+        "SELECT jar, fqn, name FROM class WHERE name = ? ORDER BY name, jar, fqn", -1,
+        &stmt, NULL));
+  _(sqlite3_bind_text(stmt, 1, *argv, -1, NULL));
+
+  int rc;
+  while (SQLITE_DONE != (rc = sqlite3_step(stmt))) {
+    const uint8_t * jar  = sqlite3_column_text(stmt, 0);
+    const uint8_t * cls  = sqlite3_column_text(stmt, 1);
+    const uint8_t * name = sqlite3_column_text(stmt, 2);
+
+    printf("%s\tjar:file://%s!/%s.class\t/\\<%s\\>/\n", name, jar, cls, name);
+  }
+
+  sqlite3_finalize(stmt);
+
+  return 0;
+}
+
 int run(int argc, char ** argv) {
   if (argc == 0) return usage();
 
@@ -171,6 +197,7 @@ int run(int argc, char ** argv) {
   if (0 == strcmp(*argv, "find"   )) return run_find   (--argc, ++argv);
   if (0 == strcmp(*argv, "javap"  )) return run_javap  (--argc, ++argv);
   if (0 == strcmp(*argv, "reset"  )) return run_reset  (--argc, ++argv);
+  if (0 == strcmp(*argv, "tagfunc")) return run_tagfunc(--argc, ++argv);
 
   return usage();
 }
