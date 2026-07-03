@@ -37,7 +37,7 @@ static char * slurp(const char * file) {
 
 static int sql_check(int rc, int exp, const char * msg) {
   if (rc == exp) return 0;
-  fprintf(stderr, "%s: %s\n%s", msg, sqlite3_errstr(rc), sqlite3_errmsg(db));
+  fprintf(stderr, "%s: %s\n%s\n", msg, sqlite3_errstr(rc), sqlite3_errmsg(db));
   return 1;
 }
 #define _chk(x, exp) if (sql_check((x), exp, #x)) return 1;
@@ -53,11 +53,14 @@ int run_add_jar(int argc, char ** argv) {
 
   sqlite3_stmt * stmt;
   _(sqlite3_prepare_v2(db,
-        "INSERT INTO class (jar, name, fqn) VALUES (?, ?, ?)", -1,
+        "INSERT INTO class (jar, fqn) VALUES (?, ?)", -1,
         &stmt, NULL));
 
+  int count = 0;
   while (fgets(buf, 1024, f)) {
     buf[strlen(buf) - 1] = 0; // Chop EOL
+
+    if (0 == strncmp("META-INF/", buf, 9)) continue;
 
     char * ext = strrchr(buf, '.');
     if (!ext) continue;
@@ -70,14 +73,17 @@ int run_add_jar(int argc, char ** argv) {
 
     _(sqlite3_reset(stmt));
     _(sqlite3_bind_text(stmt, 1, *argv, -1, NULL));
-    _(sqlite3_bind_text(stmt, 2, name,  -1, NULL));
-    _(sqlite3_bind_text(stmt, 3, buf,   -1, NULL));
+    _(sqlite3_bind_text(stmt, 2, buf,   -1, NULL));
     _chk(sqlite3_step(stmt), SQLITE_DONE);
+
+    count++;
   }
 
   pclose(f);
 
   sqlite3_finalize(stmt);
+
+  fprintf(stderr, "loaded %d classes from %s\n", count, *argv);
 
   return 0;
 }
