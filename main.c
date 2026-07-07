@@ -57,7 +57,7 @@ int run_add_jar(int argc, char ** argv) {
 
   sqlite3_stmt * stmt;
   _(sqlite3_prepare_v2(db,
-        "INSERT INTO class (jar, fqn, name) VALUES (?, ?, ?)", -1,
+        "INSERT OR REPLACE INTO class (jar, fqn, name) VALUES (?, ?, ?)", -1,
         &stmt, NULL));
 
   int count = 0;
