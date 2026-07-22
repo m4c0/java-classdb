@@ -63,6 +63,10 @@ int run_add_jar(int argc, char ** argv) {
   if (argc != 1) return usage();
 
   FILE * zip = fopen(*argv, "rb");
+  assert(zip);
+
+  char * err = NULL;
+  _(sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, &err));
 
   sqlite3_stmt * stmt;
   _(sqlite3_prepare_v2(db,
@@ -108,6 +112,8 @@ int run_add_jar(int argc, char ** argv) {
 
   fclose(zip);
   sqlite3_finalize(stmt);
+
+  _(sqlite3_exec(db, "COMMIT", NULL, NULL, &err));
 
   fprintf(stderr, "loaded %d classes from %s\n", count, *argv);
 
