@@ -47,22 +47,43 @@ static int sql_check(int rc, int exp, const char * msg) {
 #define _chk(x, exp) if (sql_check((x), exp, #x)) return 1;
 #define _(x) _chk(x, SQLITE_OK)
 
+typedef struct zip_hdr_s {
+  uint16_t version;
+  uint16_t flag;
+  uint16_t method;
+  uint16_t mod_time;
+  uint16_t mod_date;
+  uint32_t crc32;
+  uint32_t comp_size;
+  uint32_t uncomp_size;
+  uint16_t fname_len;
+  uint16_t extra_len;
+} __attribute__((packed)) zip_hdr_t;
 int run_add_jar(int argc, char ** argv) {
   if (argc != 1) return usage();
 
-  char buf[1024];
-  snprintf(buf, 1024, "jar tf '%s'", *argv);
-  FILE * f = popen(buf, "r");
-  assert(f);
+  FILE * zip = fopen(*argv, "rb");
 
   sqlite3_stmt * stmt;
   _(sqlite3_prepare_v2(db,
         "INSERT OR REPLACE INTO class (jar, fqn, name) VALUES (?, ?, ?)", -1,
         &stmt, NULL));
 
+  char buf[65536];
+  zip_hdr_t hdr;
   int count = 0;
-  while (fgets(buf, 1024, f)) {
-    buf[strlen(buf) - 1] = 0; // Chop EOL
+  while (!feof(zip)) {
+    uint32_t magic;
+    int n = fread(&magic, sizeof(magic), 1, zip);
+    if (n <= 0) break;
+    if (magic != 0x04034b50) {
+      fseek(zip, -3, SEEK_CUR);
+      continue;
+    }
+
+    assert(fread(&hdr, sizeof(hdr), 1, zip));
+    assert(fread(buf, hdr.fname_len, 1, zip));
+    buf[hdr.fname_len] = 0;
 
     if (0 == strncmp("META-INF/", buf, 9)) continue;
 
@@ -85,8 +106,7 @@ int run_add_jar(int argc, char ** argv) {
     count++;
   }
 
-  pclose(f);
-
+  fclose(zip);
   sqlite3_finalize(stmt);
 
   fprintf(stderr, "loaded %d classes from %s\n", count, *argv);
