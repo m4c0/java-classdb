@@ -23,7 +23,7 @@ static int run(char ** args) {
 
 int main() {
   if (!fopen("sqlite3.o", "rb")) RUN("clang", "-c", "-O3", "-o", "sqlite3.o", "sqlite3.c");
-  RUN("clang", "-Wall", "-c", "-g", "-o", "main.o", "main.c");
-  RUN("clang", "-g",  "-o", "classdb", "main.o", "sqlite3.o");
+  RUN("clang", "-Wall", "-c", "-g", "-O3", "-o", "main.o", "main.c");
+  RUN("clang", "-g", "-O3", "-o", "classdb", "main.o", "sqlite3.o");
   return 0;
 }

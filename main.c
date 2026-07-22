@@ -89,6 +89,8 @@ int run_add_jar(int argc, char ** argv) {
     assert(fread(buf, hdr.fname_len, 1, zip));
     buf[hdr.fname_len] = 0;
 
+    assert(0 == fseek(zip, hdr.extra_len + hdr.comp_size, SEEK_CUR));
+
     if (0 == strncmp("META-INF/", buf, 9)) continue;
 
     char * ext = strrchr(buf, '.');
